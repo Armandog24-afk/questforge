@@ -1,0 +1,109 @@
+@import "tailwindcss";
+
+:root {
+  --qf-background: #111827;
+  --qf-surface: #1f2937;
+  --qf-surface-2: #273449;
+  --qf-border: #374151;
+  --qf-text: #f9fafb;
+  --qf-muted: #9ca3af;
+  --qf-accent-purple: #7c3aed;
+  --qf-accent-purple-hover: #6d28d9;
+  --qf-accent-blue: #2563eb;
+  --qf-accent-blue-hover: #1d4ed8;
+  --qf-success: #22c55e;
+  --qf-warning: #f59e0b;
+  --qf-error: #ef4444;
+
+  --background: var(--qf-background);
+  --foreground: var(--qf-text);
+}
+
+@theme inline {
+  --color-background: var(--qf-background);
+  --color-foreground: var(--qf-text);
+
+  --color-surface: var(--qf-surface);
+  --color-surface-2: var(--qf-surface-2);
+  --color-border: var(--qf-border);
+  --color-muted: var(--qf-muted);
+
+  --color-accent-purple: var(--qf-accent-purple);
+  --color-accent-purple-hover: var(--qf-accent-purple-hover);
+  --color-accent-blue: var(--qf-accent-blue);
+  --color-accent-blue-hover: var(--qf-accent-blue-hover);
+  --color-success: var(--qf-success);
+  --color-warning: var(--qf-warning);
+  --color-error: var(--qf-error);
+
+  --font-display: "Cinzel", Georgia, serif;
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "Courier New", monospace;
+
+  --radius-card: 16px;
+  --radius-button: 12px;
+  --radius-badge: 999px;
+}
+
+* {
+  border-color: var(--qf-border);
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background: radial-gradient(circle at 20% -10%, rgba(124, 58, 237, 0.12), transparent 45%),
+    radial-gradient(circle at 80% 0%, rgba(37, 99, 235, 0.1), transparent 40%), var(--qf-background);
+  color: var(--qf-text);
+  font-family: var(--font-sans);
+  min-height: 100vh;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--qf-border);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--qf-muted);
+}
+
+.qf-glow {
+  box-shadow: 0 0 0 1px rgba(124, 58, 237, 0.4), 0 0 24px rgba(124, 58, 237, 0.25);
+}
+
+.qf-scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--qf-border) transparent;
+}
+
+.qf-map-checker {
+  background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.03) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(255, 255, 255, 0.03) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(255, 255, 255, 0.03) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(255, 255, 255, 0.03) 75%);
+  background-size: 32px 32px;
+  background-position: 0 0, 0 16px, 16px -16px, -16px 0px;
+}

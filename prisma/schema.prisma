@@ -1,0 +1,465 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─────────────────────────────────────────────
+// Enums
+// ─────────────────────────────────────────────
+
+enum PreferredRole {
+  master
+  player
+  both
+}
+
+enum CampaignPrivacy {
+  private
+  invite
+  public
+}
+
+enum MemberRole {
+  master
+  player
+  spectator
+}
+
+enum SessionStatus {
+  planned
+  live
+  completed
+  cancelled
+}
+
+enum GridType {
+  none
+  square
+  hex
+}
+
+enum AssetSource {
+  upload
+  demo
+  ai
+  premium
+}
+
+enum NoteVisibility {
+  master
+  shared
+}
+
+enum DiceVisibility {
+  public
+  private_master
+}
+
+enum ChatMessageType {
+  user
+  dice
+  token_move
+  scene_change
+  note
+  system
+}
+
+enum AIRequestType {
+  scene
+  map
+  npc
+  item
+  place
+  encounter
+  atmosphere
+  music
+}
+
+enum AIRequestStatus {
+  pending
+  completed
+  failed
+  mock
+}
+
+enum AssetType {
+  map
+  token
+  music
+  scene
+  image
+  prompt
+  note
+}
+
+enum PremiumItemType {
+  token_skin
+  dice_skin
+  map_pack
+  music_pack
+  theme
+  ai_credits
+  storage
+  avatar
+}
+
+// ─────────────────────────────────────────────
+// Core models
+// ─────────────────────────────────────────────
+
+model User {
+  id             String        @id @default(cuid())
+  email          String        @unique
+  name           String?
+  image          String?
+  nickname       String?
+  preferredRole  PreferredRole @default(both)
+  isPremium      Boolean       @default(false)
+  aiCredits      Int           @default(20)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  ownedCampaigns  Campaign[]        @relation("CampaignOwner")
+  memberships     CampaignMember[]
+  characters      Character[]
+  tokensOwned     Token[]
+  diceRolls       DiceRoll[]
+  chatMessages    ChatMessage[]
+  notes           Note[]
+  aiRequests      AIRequest[]
+  assets          Asset[]
+  purchases       UserPurchase[]
+  scenesCreated   Scene[]
+  mapsCreated     Map[]
+  musicCreated    MusicTrack[]
+  roomPresences   RoomPresence[]
+}
+
+model Campaign {
+  id          String          @id @default(cuid())
+  name        String
+  description String?
+  genre       String?
+  tone        String?
+  gameSystem  String?
+  coverImage  String?
+  ownerId     String
+  privacy     CampaignPrivacy @default(invite)
+  inviteCode  String          @unique @default(cuid())
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  owner        User             @relation("CampaignOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members      CampaignMember[]
+  sessions     Session[]
+  scenes       Scene[]
+  maps         Map[]
+  tokens       Token[]
+  characters   Character[]
+  diceRolls    DiceRoll[]
+  chatMessages ChatMessage[]
+  notes        Note[]
+  musicTracks  MusicTrack[]
+  aiRequests   AIRequest[]
+  assets       Asset[]
+  presences    RoomPresence[]
+
+  @@index([ownerId])
+}
+
+model CampaignMember {
+  id         String     @id @default(cuid())
+  campaignId String
+  userId     String
+  role       MemberRole @default(player)
+  joinedAt   DateTime   @default(now())
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, userId])
+  @@index([campaignId])
+  @@index([userId])
+}
+
+model Session {
+  id           String        @id @default(cuid())
+  campaignId   String
+  title        String
+  scheduledAt  DateTime?
+  status       SessionStatus @default(planned)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+}
+
+model Scene {
+  id              String   @id @default(cuid())
+  campaignId      String
+  name            String
+  description     String?
+  mapId           String?
+  activeMusicId   String?
+  gridType        GridType @default(square)
+  gridEnabled     Boolean  @default(true)
+  gridSize        Int      @default(40)
+  isActive        Boolean  @default(false)
+  createdBy       String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  map      Map?      @relation(fields: [mapId], references: [id])
+  creator  User      @relation(fields: [createdBy], references: [id])
+  tokens   Token[]
+  notes    Note[]
+  chatMessages ChatMessage[]
+  diceRolls    DiceRoll[]
+  presences    RoomPresence[]
+
+  @@index([campaignId])
+}
+
+model Map {
+  id          String      @id @default(cuid())
+  campaignId  String
+  name        String
+  imageUrl    String
+  prompt      String?
+  genre       String?
+  style       String?
+  atmosphere  String?
+  tags        Json?
+  source      AssetSource @default(demo)
+  createdBy   String
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  creator  User     @relation(fields: [createdBy], references: [id])
+  scenes   Scene[]
+
+  @@index([campaignId])
+}
+
+model Token {
+  id          String   @id @default(cuid())
+  campaignId  String
+  sceneId     String
+  characterId String?
+  ownerId     String?
+  name        String
+  icon        String?
+  imageUrl    String?
+  color       String   @default("#7c3aed")
+  xPosition   Float    @default(50)
+  yPosition   Float    @default(50)
+  size        Float    @default(1)
+  locked      Boolean  @default(false)
+  visible     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  campaign  Campaign   @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  scene     Scene      @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+  character Character? @relation(fields: [characterId], references: [id])
+  owner     User?      @relation(fields: [ownerId], references: [id])
+
+  @@index([sceneId])
+  @@index([campaignId])
+}
+
+model Character {
+  id              String   @id @default(cuid())
+  campaignId      String
+  userId          String
+  name            String
+  avatar          String?
+  tokenImage      String?
+  roleLabel       String?
+  originLabel     String?
+  mainResource    String?
+  description     String?
+  abilitiesNotes  String?
+  inventoryNotes  String?
+  backstory       String?
+  color           String?  @default("#2563eb")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokens   Token[]
+
+  @@index([campaignId])
+  @@index([userId])
+}
+
+model DiceRoll {
+  id         String         @id @default(cuid())
+  campaignId String
+  sceneId    String?
+  userId     String?
+  formula    String
+  diceType   String?
+  quantity   Int?
+  modifier   Int?
+  results    Json
+  total      Int
+  visibility DiceVisibility @default(public)
+  createdAt  DateTime       @default(now())
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  scene    Scene?   @relation(fields: [sceneId], references: [id])
+  user     User?    @relation(fields: [userId], references: [id])
+
+  @@index([campaignId])
+  @@index([sceneId])
+}
+
+model ChatMessage {
+  id         String          @id @default(cuid())
+  campaignId String
+  sceneId    String?
+  userId     String?
+  type       ChatMessageType @default(user)
+  message    String
+  metadata   Json?
+  createdAt  DateTime        @default(now())
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  scene    Scene?   @relation(fields: [sceneId], references: [id])
+  user     User?    @relation(fields: [userId], references: [id])
+
+  @@index([campaignId])
+  @@index([sceneId])
+}
+
+model Note {
+  id         String         @id @default(cuid())
+  campaignId String
+  sceneId    String?
+  title      String
+  content    String
+  visibility NoteVisibility @default(shared)
+  tags       Json?
+  createdBy  String
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  scene    Scene?   @relation(fields: [sceneId], references: [id])
+  creator  User     @relation(fields: [createdBy], references: [id])
+
+  @@index([campaignId])
+  @@index([sceneId])
+}
+
+model MusicTrack {
+  id           String      @id @default(cuid())
+  campaignId   String?
+  name         String
+  category     String?
+  mood         String?
+  audioUrl     String
+  loopEnabled  Boolean     @default(true)
+  source       AssetSource @default(demo)
+  prompt       String?
+  createdBy    String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  campaign Campaign? @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  creator  User?     @relation(fields: [createdBy], references: [id])
+
+  @@index([campaignId])
+}
+
+model AIRequest {
+  id             String          @id @default(cuid())
+  campaignId     String?
+  sceneId        String?
+  userId         String?
+  requestType    AIRequestType
+  prompt         String
+  resultText     String?
+  resultAssetUrl String?
+  provider       String?
+  status         AIRequestStatus @default(pending)
+  createdAt      DateTime        @default(now())
+
+  campaign Campaign? @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  user     User?     @relation(fields: [userId], references: [id])
+
+  @@index([campaignId])
+}
+
+model Asset {
+  id          String      @id @default(cuid())
+  campaignId  String?
+  assetType   AssetType
+  name        String
+  url         String?
+  previewUrl  String?
+  tags        Json?
+  source      AssetSource @default(upload)
+  createdBy   String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  campaign Campaign? @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  creator  User?     @relation(fields: [createdBy], references: [id])
+
+  @@index([campaignId])
+}
+
+model PremiumItem {
+  id          String          @id @default(cuid())
+  itemType    PremiumItemType
+  name        String
+  description String?
+  priceEur    Float
+  previewUrl  String?
+  active      Boolean         @default(true)
+  comingSoon  Boolean         @default(true)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  purchases UserPurchase[]
+}
+
+model UserPurchase {
+  id            String   @id @default(cuid())
+  userId        String
+  premiumItemId String
+  purchasedAt   DateTime @default(now())
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  premiumItem PremiumItem @relation(fields: [premiumItemId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model RoomPresence {
+  id         String   @id @default(cuid())
+  campaignId String
+  sceneId    String
+  userId     String
+  status     String   @default("online")
+  lastSeenAt DateTime @default(now())
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  scene    Scene    @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([sceneId, userId])
+  @@index([campaignId])
+}
